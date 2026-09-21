@@ -1,22 +1,290 @@
-🤖
-PyBot AI
-v4.0
-＋ New Chat
-AI MODE
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-🤖 General
-TOOLS
-🌐 Web Search  🌙 Dark / ☀ Light
-Ready
-PyBot AI
-General Mode
-● Web OFF
-🤖
-Welcome to PyBot AI
-Your AI assistant for studying, coding, creativity and everyday questions.
+    <title>PyBot AI</title>
 
-🐍 Python 📚 Study 💻 Coding ✨ Ideas
-Message PyBot AI...
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
 
- ➤
-Enter to send • Shift + Enter for new line
+<body>
+
+<div class="app">
+
+    <header class="header">
+        <div>
+            <h1>🤖 PyBot AI</h1>
+            <p>Your AI assistant for studying, coding and everyday questions.</p>
+        </div>
+
+        <div class="status">
+            <span class="dot"></span>
+            Online
+        </div>
+    </header>
+
+    <section class="controls">
+
+        <label for="mode">Mode</label>
+
+        <select id="mode">
+            <option value="general">🌐 General</option>
+            <option value="study">📚 Study</option>
+            <option value="coding">💻 Coding</option>
+            <option value="creative">✨ Creative</option>
+        </select>
+
+        <label class="web-option">
+            <input type="checkbox" id="webSearch">
+            🌐 Web Search
+        </label>
+
+        <button id="clearBtn" type="button">
+            🗑️ Clear Chat
+        </button>
+
+    </section>
+
+    <main id="chat" class="chat">
+
+        <div class="message bot">
+            <div class="avatar">🤖</div>
+
+            <div class="bubble">
+                <strong>PyBot AI</strong>
+                <p>
+                    Hello! 👋 I am PyBot AI.
+                    Ask me anything about studying, coding,
+                    creativity or general questions.
+                </p>
+            </div>
+        </div>
+
+    </main>
+
+    <form id="chatForm" class="input-area">
+
+        <textarea
+            id="message"
+            placeholder="Type your message here..."
+            rows="1"
+            maxlength="6000"
+            required></textarea>
+
+        <button id="sendBtn" type="submit">
+            Send ➤
+        </button>
+
+    </form>
+
+    <div class="hint">
+        Press Enter to send • Shift + Enter for a new line
+    </div>
+
+</div>
+
+<script>
+
+const chat = document.getElementById("chat");
+const form = document.getElementById("chatForm");
+const messageInput = document.getElementById("message");
+const sendBtn = document.getElementById("sendBtn");
+const modeSelect = document.getElementById("mode");
+const webSearch = document.getElementById("webSearch");
+const clearBtn = document.getElementById("clearBtn");
+
+let history = [];
+
+function addMessage(text, type) {
+
+    const message = document.createElement("div");
+    message.className = "message " + type;
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = type === "user" ? "👤" : "🤖";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    const content = document.createElement("div");
+    content.textContent = text;
+
+    bubble.appendChild(content);
+    message.appendChild(avatar);
+    message.appendChild(bubble);
+
+    chat.appendChild(message);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function addTyping() {
+
+    const message = document.createElement("div");
+    message.className = "message bot";
+    message.id = "typingMessage";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = "🤖";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble typing";
+
+    bubble.innerHTML = `
+        <span></span>
+        <span></span>
+        <span></span>
+    `;
+
+    message.appendChild(avatar);
+    message.appendChild(bubble);
+    chat.appendChild(message);
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+
+    const typing = document.getElementById("typingMessage");
+
+    if (typing) {
+        typing.remove();
+    }
+}
+
+form.addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    const text = messageInput.value.trim();
+
+    if (!text) {
+        return;
+    }
+
+    addMessage(text, "user");
+
+    history.push({
+        role: "user",
+        content: text
+    });
+
+    messageInput.value = "";
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Thinking...";
+
+    addTyping();
+
+    try {
+
+        const response = await fetch("/api/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                message: text,
+                mode: modeSelect.value,
+                web_search: webSearch.checked,
+                history: history.slice(-20)
+            })
+
+        });
+
+        const data = await response.json();
+
+        removeTyping();
+
+        if (!response.ok) {
+
+            addMessage(
+                "❌ " + (data.error || "Something went wrong."),
+                "bot"
+            );
+
+            return;
+        }
+
+        const reply =
+            data.reply ||
+            data.output ||
+            data.message ||
+            "No response received.";
+
+        addMessage(reply, "bot");
+
+        history.push({
+            role: "assistant",
+            content: reply
+        });
+
+    } catch (error) {
+
+        removeTyping();
+
+        addMessage(
+            "❌ Connection error. Please try again.",
+            "bot"
+        );
+
+        console.error(error);
+
+    } finally {
+
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send ➤";
+
+        messageInput.focus();
+    }
+
+});
+
+messageInput.addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter" && !event.shiftKey) {
+
+        event.preventDefault();
+        form.requestSubmit();
+    }
+
+});
+
+clearBtn.addEventListener("click", function() {
+
+    history = [];
+
+    chat.innerHTML = `
+        <div class="message bot">
+
+            <div class="avatar">🤖</div>
+
+            <div class="bubble">
+
+                <strong>PyBot AI</strong>
+
+                <p>
+                    Chat cleared! 👋
+                    How can I help you?
+                </p>
+
+            </div>
+
+        </div>
+    `;
+
+    messageInput.focus();
+
+});
+
+</script>
+
+</body>
+</html>
