@@ -297,10 +297,12 @@ Important rules:
                 instructions=instructions,
                 input=api_input,
                 tools=[
-                    {
-                        "type": "web_search_preview"
-                    }
-                ],
+                tools=[
+    {
+        "type": "web_search",
+        "search_context_size": "low"
+    }
+],
                 max_output_tokens=800
             )
 
