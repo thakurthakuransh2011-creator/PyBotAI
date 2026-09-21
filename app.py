@@ -1,13 +1,13 @@
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from flask import Flask, jsonify, render_template, request
 from openai import OpenAI
 
 
 # ============================================================
-# PYBOT AI WEB v4.0
+# PyBotAI - Flask + OpenAI Responses API
 # ============================================================
 
 app = Flask(__name__)
@@ -17,265 +17,261 @@ app = Flask(__name__)
 # ------------------------------------------------------------
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
+MAX_MESSAGE_LENGTH = 6000
+RATE_LIMIT_REQUESTS = 20
+RATE_LIMIT_WINDOW = 60
 
 API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not API_KEY:
-    raise RuntimeError(
-        "OPENAI_API_KEY environment variable is missing."
-    )
+    print("WARNING: OPENAI_API_KEY is not set.")
 
-client = OpenAI(api_key=API_KEY)
+client = OpenAI(api_key=API_KEY) if API_KEY else None
 
 
 # ------------------------------------------------------------
-# AI MODES
+# Rate limiter
+# ------------------------------------------------------------
+
+request_log = defaultdict(deque)
+
+
+def is_rate_limited(ip_address):
+    now = time.time()
+    history = request_log[ip_address]
+
+    while history and now - history[0] > RATE_LIMIT_WINDOW:
+        history.popleft()
+
+    if len(history) >= RATE_LIMIT_REQUESTS:
+        return True
+
+    history.append(now)
+    return False
+
+
+# ------------------------------------------------------------
+# Modes
 # ------------------------------------------------------------
 
 MODE_INSTRUCTIONS = {
-
     "General": """
-You are PyBot AI, a helpful general-purpose AI assistant.
+You are PyBot, a helpful AI assistant.
 
-Give accurate, clear and useful answers.
-Use simple language when appropriate.
-Do not make answers unnecessarily long.
+Answer clearly, accurately, and naturally.
+Use simple language when possible.
+If the user asks for steps, give numbered steps.
+If the user asks for code, provide clean copy-paste-ready code.
 """,
 
     "Study": """
-You are PyBot AI in Study Mode.
+You are PyBot in Study Mode.
 
-Help students understand their subjects.
-Give correct, clear and age-appropriate explanations.
-For school questions, provide direct answers with brief explanations.
-Use points and examples when useful.
-Do not make answers unnecessarily complicated.
+Help the student understand their school subjects.
+Give correct, clear, age-appropriate explanations.
+For homework, give the answer first and then a short explanation when useful.
+Prefer point-wise answers when appropriate.
 """,
 
     "Coding": """
-You are PyBot AI in Coding Mode.
+You are PyBot in Coding Mode.
 
-You are an expert programming assistant.
+Help with programming, debugging, Arduino, Python,
+Flask, HTML, CSS, JavaScript, and related topics.
 
-Help with Python, Arduino, HTML, CSS, JavaScript and other
-programming languages.
-
-When the user asks for code:
-- Give copy-paste-ready code.
-- Check syntax carefully.
-- Explain important parts briefly.
-- Give complete code when the user requests complete code.
+When fixing code:
+- explain the problem briefly
+- provide complete corrected code when practical
+- make the code copy-paste-ready
+- avoid unnecessary complexity
 """,
 
     "Creative": """
-You are PyBot AI in Creative Mode.
+You are PyBot in Creative Mode.
 
-Help with creative writing, ideas, stories, project ideas,
-presentations, names and imaginative content.
+Help with creative writing, ideas, captions,
+project ideas, descriptions, and brainstorming.
 
-Be creative, useful and clear.
+Keep the response useful and well organized.
 """
 }
 
 
 # ------------------------------------------------------------
-# BASIC PUBLIC-SERVER PROTECTION
+# Helper functions
 # ------------------------------------------------------------
 
-# Maximum characters accepted from one message.
-MAX_MESSAGE_LENGTH = 6000
-
-# Simple in-memory request limiter.
-# This is not a replacement for a production rate-limit service,
-# but helps prevent accidental excessive API requests.
-REQUEST_LIMIT = 20
-REQUEST_WINDOW = 60
-
-request_log = defaultdict(list)
+def clean_mode(mode):
+    if mode in MODE_INSTRUCTIONS:
+        return mode
+    return "General"
 
 
-def check_rate_limit(ip_address):
+def clean_history(history):
+    """
+    Keep only a small amount of valid conversation history.
+    """
+    if not isinstance(history, list):
+        return []
 
-    current_time = time.time()
+    cleaned = []
 
-    # Remove old requests
-    request_log[ip_address] = [
-        timestamp
-        for timestamp in request_log[ip_address]
-        if current_time - timestamp < REQUEST_WINDOW
-    ]
+    for item in history[-20:]:
+        if not isinstance(item, dict):
+            continue
 
-    if len(request_log[ip_address]) >= REQUEST_LIMIT:
-        return False
+        role = item.get("role")
+        content = item.get("content")
 
-    request_log[ip_address].append(current_time)
+        if role not in ("user", "assistant"):
+            continue
 
-    return True
+        if not isinstance(content, str):
+            continue
+
+        content = content.strip()
+
+        if not content:
+            continue
+
+        content = content[:6000]
+
+        cleaned.append({
+            "role": role,
+            "content": content
+        })
+
+    return cleaned
+
+
+def build_input(history, message):
+    """
+    Build Responses API input.
+    """
+
+    messages = []
+
+    for item in history:
+        messages.append({
+            "role": item["role"],
+            "content": item["content"]
+        })
+
+    messages.append({
+        "role": "user",
+        "content": message
+    })
+
+    return messages
 
 
 # ------------------------------------------------------------
-# HOME PAGE
+# Routes
 # ------------------------------------------------------------
 
 @app.route("/")
 def home():
-    return render_template(
-        "index.html",
-        model=MODEL
-    )
+    return render_template("index.html")
 
-
-# ------------------------------------------------------------
-# HEALTH CHECK
-# ------------------------------------------------------------
 
 @app.route("/health")
 def health():
-
     return jsonify({
         "status": "ok",
-        "app": "PyBot AI",
-        "version": "4.0"
+        "service": "PyBotAI",
+        "model": MODEL,
+        "api_key_configured": bool(API_KEY)
     })
 
 
 # ------------------------------------------------------------
-# CHAT API
+# Chat API
 # ------------------------------------------------------------
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
 
     # --------------------------------------------------------
-    # Rate limit
+    # Basic request validation
     # --------------------------------------------------------
 
-    client_ip = request.headers.get(
+    ip_address = request.headers.get(
         "X-Forwarded-For",
-        request.remote_addr
+        request.remote_addr or "unknown"
     )
 
-    if client_ip and "," in client_ip:
-        client_ip = client_ip.split(",")[0].strip()
+    if "," in ip_address:
+        ip_address = ip_address.split(",")[0].strip()
 
-    if not client_ip:
-        client_ip = "unknown"
-
-    if not check_rate_limit(client_ip):
-
+    if is_rate_limited(ip_address):
         return jsonify({
             "error": "Too many requests. Please wait a little and try again."
         }), 429
 
-
-    # --------------------------------------------------------
-    # JSON data
-    # --------------------------------------------------------
-
     data = request.get_json(silent=True)
 
-    if not data:
-
+    if not isinstance(data, dict):
         return jsonify({
-            "error": "Invalid request."
+            "error": "Invalid JSON request."
         }), 400
 
-
-    message = str(
-        data.get("message", "")
-    ).strip()
-
-    mode = str(
-        data.get("mode", "General")
-    )
-
-    web_search = bool(
-        data.get("web_search", False)
-    )
-
-    history = data.get(
-        "history",
-        []
-    )
-
+    message = data.get("message", "")
+    mode = clean_mode(data.get("mode", "General"))
+    web_search = bool(data.get("web_search", False))
+    history = clean_history(data.get("history", []))
 
     # --------------------------------------------------------
-    # Validate message
+    # Message validation
     # --------------------------------------------------------
+
+    if not isinstance(message, str):
+        return jsonify({
+            "error": "Message must be text."
+        }), 400
+
+    message = message.strip()
 
     if not message:
-
         return jsonify({
             "error": "Please enter a message."
         }), 400
 
-
     if len(message) > MAX_MESSAGE_LENGTH:
-
         return jsonify({
-            "error": (
-                f"Message is too long. "
-                f"Maximum {MAX_MESSAGE_LENGTH} characters."
-            )
+            "error": f"Message is too long. Maximum {MAX_MESSAGE_LENGTH} characters."
         }), 400
 
+    # --------------------------------------------------------
+    # API key check
+    # --------------------------------------------------------
+
+    if not API_KEY or client is None:
+        print("ERROR: OPENAI_API_KEY is missing.")
+
+        return jsonify({
+            "error": "OpenAI API key is not configured on the server."
+        }), 500
 
     # --------------------------------------------------------
-    # Validate mode
+    # Instructions
     # --------------------------------------------------------
 
-    if mode not in MODE_INSTRUCTIONS:
+    instructions = MODE_INSTRUCTIONS[mode]
 
-        mode = "General"
+    instructions += """
 
+Important:
+- Do not claim that you performed an action you did not perform.
+- If information may be current and web search is enabled, use web search.
+- Keep answers readable.
+- Use Markdown when it improves readability.
+"""
 
     # --------------------------------------------------------
     # Build conversation
     # --------------------------------------------------------
 
-    instructions = MODE_INSTRUCTIONS[mode]
-
-    api_input = []
-
-
-    # --------------------------------------------------------
-    # Add previous messages
-    # --------------------------------------------------------
-
-    if isinstance(history, list):
-
-        for item in history[-20:]:
-
-            if not isinstance(item, dict):
-                continue
-
-            role = item.get("role")
-            content = item.get("content")
-
-            if role not in ["user", "assistant"]:
-                continue
-
-            if not isinstance(content, str):
-                continue
-
-            if not content.strip():
-                continue
-
-            api_input.append({
-                "role": role,
-                "content": content[:6000]
-            })
-
-
-    # --------------------------------------------------------
-    # Add current message
-    # --------------------------------------------------------
-
-    api_input.append({
-        "role": "user",
-        "content": message
-    })
-
+    api_input = build_input(history, message)
 
     # --------------------------------------------------------
     # OpenAI request
@@ -286,68 +282,160 @@ def chat():
         if web_search:
 
             response = client.responses.create(
-
                 model=MODEL,
-
                 instructions=instructions,
-
                 tools=[
                     {
-                        "type": "web_search"
+                        "type": "web_search_preview"
                     }
                 ],
-
                 input=api_input
             )
 
         else:
 
             response = client.responses.create(
-
                 model=MODEL,
-
                 instructions=instructions,
-
                 input=api_input
             )
 
-
         # ----------------------------------------------------
-        # Get response text
+        # Extract final text
         # ----------------------------------------------------
 
-        answer = response.output_text
+        reply = getattr(response, "output_text", None)
 
-        if not answer:
+        if not reply:
 
-            answer = (
-                "Sorry, I couldn't generate a response."
-            )
+            # Fallback parser
+            output_items = getattr(response, "output", []) or []
 
+            collected_text = []
+
+            for item in output_items:
+
+                item_type = getattr(item, "type", "")
+
+                if item_type == "message":
+
+                    content_items = getattr(item, "content", []) or []
+
+                    for content in content_items:
+
+                        content_type = getattr(
+                            content,
+                            "type",
+                            ""
+                        )
+
+                        if content_type in (
+                            "output_text",
+                            "text"
+                        ):
+
+                            text_value = getattr(
+                                content,
+                                "text",
+                                ""
+                            )
+
+                            if text_value:
+                                collected_text.append(
+                                    text_value
+                                )
+
+            reply = "\n".join(collected_text).strip()
+
+        if not reply:
+            reply = "I received an empty response from the AI."
 
         return jsonify({
-            "success": True,
-            "answer": answer,
-            "mode": mode,
-            "web_search": web_search
+            "reply": reply,
+            "mode": mode
         })
 
+    # --------------------------------------------------------
+    # OpenAI API errors
+    # --------------------------------------------------------
 
     except Exception as error:
 
-        print("OpenAI API Error:", error)
+        print("=" * 70)
+        print("OPENAI REQUEST ERROR")
+        print(type(error).__name__)
+        print(str(error))
+        print("=" * 70)
+
+        error_text = str(error)
+
+        # Do not expose unnecessary internal information
+        if "api key" in error_text.lower() or "authentication" in error_text.lower():
+            user_error = (
+                "OpenAI authentication failed. "
+                "Please check OPENAI_API_KEY in Render Environment Variables."
+            )
+
+        elif "model" in error_text.lower() and (
+            "not found" in error_text.lower()
+            or "does not exist" in error_text.lower()
+            or "unsupported" in error_text.lower()
+        ):
+            user_error = (
+                f"The model '{MODEL}' is not available for this API project. "
+                "Check the OPENAI_MODEL environment variable."
+            )
+
+        elif "web_search" in error_text.lower():
+            user_error = (
+                "Web Search is not available with the current API configuration. "
+                "Try turning Web Search off."
+            )
+
+        elif "rate" in error_text.lower():
+            user_error = (
+                "The AI service rate limit was reached. "
+                "Please wait a moment and try again."
+            )
+
+        else:
+            user_error = (
+                "PyBot could not contact the AI service. "
+                "Check the Render logs for the exact error."
+            )
 
         return jsonify({
-            "success": False,
-            "error": (
-                "PyBot couldn't contact the AI service. "
-                "Please try again."
-            )
+            "error": user_error
         }), 500
 
 
 # ------------------------------------------------------------
-# RUN LOCAL SERVER
+# Error handlers
+# ------------------------------------------------------------
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "error": "Page not found."
+    }), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({
+        "error": "Method not allowed."
+    }), 405
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        "error": "Internal server error."
+    }), 500
+
+
+# ------------------------------------------------------------
+# Local / Render server
 # ------------------------------------------------------------
 
 if __name__ == "__main__":
