@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>PyBot AI</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+<div class="app">
+
+    <!-- ================================================= -->
+    <!-- SIDEBAR -->
+    <!-- ================================================= -->
+
+    <aside class="sidebar">
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                🤖
+            </div>
+
+            <div>
+                <div class="logo-title">
+                    PyBot AI
+                </div>
+
+                <div class="logo-version">
+                    v4.0
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- New Chat -->
+
+        <button
+            class="new-chat"
+            onclick="newChat()"
+        >
+            ＋ New Chat
+        </button>
+
+
+        <!-- AI Mode -->
+
+        <div class="section-title">
+            AI MODE
+        </div>
+
+        <select
+            id="mode"
+            class="select-control"
+        >
+
+            <option value="General">
+                🤖 General
+            </option>
+
+            <option value="Study">
+                📚 Study
+            </option>
+
+            <option value="Coding">
+                💻 Coding
+            </option>
+
+            <option value="Creative">
+                ✨ Creative
+            </option>
+
+        </select>
+
+
+        <!-- Web Search -->
+
+        <div class="section-title">
+            TOOLS
+        </div>
+
+        <label class="switch-row">
+
+            <span>
+                🌐 Web Search
+            </span>
+
+            <input
+                type="checkbox"
+                id="webSearch"
+            >
+
+            <span class="switch"></span>
+
+        </label>
+
+
+        <!-- Theme -->
+
+        <button
+            class="theme-button"
+            onclick="toggleTheme()"
+        >
+            🌙 Dark / ☀ Light
+        </button>
+
+
+        <div class="sidebar-bottom">
+
+            <div class="status">
+
+                <span class="status-dot"></span>
+
+                <span id="statusText">
+                    Ready
+                </span>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ================================================= -->
+    <!-- MAIN -->
+    <!-- ================================================= -->
+
+    <main class="main">
+
+
+        <!-- HEADER -->
+
+        <header class="header">
+
+            <div>
+
+                <h1>
+                    PyBot AI
+                </h1>
+
+                <div
+                    id="modeLabel"
+                    class="mode-label"
+                >
+                    General Mode
+                </div>
+
+            </div>
+
+
+            <div
+                id="webLabel"
+                class="web-label"
+            >
+                ● Web OFF
+            </div>
+
+        </header>
+
+
+        <!-- ================================================= -->
+        <!-- CHAT -->
+        <!-- ================================================= -->
+
+        <section
+            id="chat"
+            class="chat"
+        >
+
+            <div class="welcome">
+
+                <div class="welcome-icon">
+                    🤖
+                </div>
+
+                <h2>
+                    Welcome to PyBot AI
+                </h2>
+
+                <p>
+                    Your AI assistant for studying,
+                    coding, creativity and everyday questions.
+                </p>
+
+                <div class="welcome-cards">
+
+                    <button onclick="quickMessage('Explain Python in simple words')">
+                        🐍 Python
+                    </button>
+
+                    <button onclick="quickMessage('Help me with my homework')">
+                        📚 Study
+                    </button>
+
+                    <button onclick="quickMessage('Write a Python program for me')">
+                        💻 Coding
+                    </button>
+
+                    <button onclick="quickMessage('Give me a creative project idea')">
+                        ✨ Ideas
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================================================= -->
+        <!-- INPUT -->
+        <!-- ================================================= -->
+
+        <section class="input-section">
+
+            <div class="input-box">
+
+                <textarea
+                    id="message"
+                    placeholder="Message PyBot AI..."
+                    rows="1"
+                ></textarea>
+
+                <button
+                    id="sendButton"
+                    class="send-button"
+                    onclick="sendMessage()"
+                >
+                    ➤
+                </button>
+
+            </div>
+
+            <div class="input-help">
+
+                Enter to send
+                •
+                Shift + Enter for new line
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+</div>
+
+
+<script>
+
+    // ========================================================
+    // STATE
+    // ========================================================
+
+    let conversation = [];
+
+    let generating = false;
+
+
+    // ========================================================
+    // ELEMENTS
+    // ========================================================
+
+    const messageInput =
+        document.getElementById("message");
+
+    const chat =
+        document.getElementById("chat");
+
+    const mode =
+        document.getElementById("mode");
+
+    const webSearch =
+        document.getElementById("webSearch");
+
+    const sendButton =
+        document.getElementById("sendButton");
+
+    const statusText =
+        document.getElementById("statusText");
+
+    const modeLabel =
+        document.getElementById("modeLabel");
+
+    const webLabel =
+        document.getElementById("webLabel");
+
+
+    // ========================================================
+    // MODE CHANGE
+    // ========================================================
+
+    mode.addEventListener(
+        "change",
+        function () {
+
+            modeLabel.textContent =
+                mode.value + " Mode";
+
+        }
+    );
+
+
+    // ========================================================
+    // WEB SEARCH
+    // ========================================================
+
+    webSearch.addEventListener(
+        "change",
+        function () {
+
+            if (webSearch.checked) {
+
+                webLabel.textContent =
+                    "● Web ON";
+
+                webLabel.classList.add(
+                    "web-on"
+                );
+
+            } else {
+
+                webLabel.textContent =
+                    "● Web OFF";
+
+                webLabel.classList.remove(
+                    "web-on"
+                );
+
+            }
+
+        }
+    );
+
+
+    // ========================================================
+    // ENTER KEY
+    // ========================================================
+
+    messageInput.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                sendMessage();
+
+            }
+
+        }
+    );
+
+
+    // ========================================================
+    // QUICK MESSAGE
+    // ========================================================
+
+    function quickMessage(text) {
+
+        messageInput.value = text;
+
+        messageInput.focus();
+
+    }
+
+
+    // ========================================================
+    // SEND MESSAGE
+    // ========================================================
+
+    async function sendMessage() {
+
+        if (generating) {
+            return;
+        }
+
+        const message =
+            messageInput.value.trim();
+
+
+        if (!message) {
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // User message
+        // ----------------------------------------------------
+
+        addMessage(
+            "user",
+            message
+        );
+
+
+        conversation.push({
+            role: "user",
+            content: message
+        });
+
+
+        messageInput.value = "";
+
+        generating = true;
+
+        setLoading(true);
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/chat",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            message: message,
+
+                            mode: mode.value,
+
+                            web_search:
+                                webSearch.checked,
+
+                            history:
+                                conversation.slice(
+                                    0,
+                                    -1
+                                )
+
+                        })
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    "Something went wrong."
+                );
+
+            }
+
+
+            // ------------------------------------------------
+            // AI response
+            // ------------------------------------------------
+
+            addMessage(
+                "assistant",
+                data.answer
+            );
+
+
+            conversation.push({
+
+                role: "assistant",
+
+                content: data.answer
+
+            });
+
+
+        }
+
+        catch (error) {
+
+            addMessage(
+                "assistant",
+                "⚠️ " + error.message
+            );
+
+        }
+
+        finally {
+
+            generating = false;
+
+            setLoading(false);
+
+        }
+
+    }
+
+
+    // ========================================================
+    // ADD MESSAGE
+    // ========================================================
+
+    function addMessage(
+        type,
+        text
+    ) {
+
+        const wrapper =
+            document.createElement(
+                "div"
+            );
+
+
+        wrapper.className =
+            "message " + type;
+
+
+        const avatar =
+            document.createElement(
+                "div"
+            );
+
+
+        avatar.className =
+            "avatar";
+
+
+        avatar.textContent =
+            type === "user"
+                ? "You"
+                : "🤖";
+
+
+        const content =
+            document.createElement(
+                "div"
+            );
+
+
+        content.className =
+            "message-content";
+
+
+        const name =
+            document.createElement(
+                "div"
+            );
+
+
+        name.className =
+            "message-name";
+
+
+        name.textContent =
+            type === "user"
+                ? "You"
+                : "PyBot AI";
+
+
+        const bubble =
+            document.createElement(
+                "div"
+            );
+
+
+        bubble.className =
+            "bubble";
+
+
+        bubble.textContent =
+            text;
+
+
+        content.appendChild(
+            name
+        );
+
+        content.appendChild(
+            bubble
+        );
+
+
+        wrapper.appendChild(
+            avatar
+        );
+
+        wrapper.appendChild(
+            content
+        );
+
+
+        chat.appendChild(
+            wrapper
+        );
+
+
+        scrollToBottom();
+
+    }
+
+
+    // ========================================================
+    // LOADING
+    // ========================================================
+
+    function setLoading(
+        loading
+    ) {
+
+        if (loading) {
+
+            sendButton.disabled =
+                true;
+
+            sendButton.textContent =
+                "•••";
+
+            statusText.textContent =
+                "Thinking...";
+
+        }
+
+        else {
+
+            sendButton.disabled =
+                false;
+
+            sendButton.textContent =
+                "➤";
+
+            statusText.textContent =
+                "Ready";
+
+        }
+
+    }
+
+
+    // ========================================================
+    // SCROLL
+    // ========================================================
+
+    function scrollToBottom() {
+
+        chat.scrollTop =
+            chat.scrollHeight;
+
+    }
+
+
+    // ========================================================
+    // NEW CHAT
+    // ========================================================
+
+    function newChat() {
+
+        if (generating) {
+            return;
+        }
+
+        conversation = [];
+
+        chat.innerHTML = `
+
+            <div class="welcome">
+
+                <div class="welcome-icon">
+                    🤖
+                </div>
+
+                <h2>
+                    New Chat
+                </h2>
+
+                <p>
+                    How can I help you?
+                </p>
+
+            </div>
+
+        `;
+
+        messageInput.focus();
+
+    }
+
+
+    // ========================================================
+    // THEME
+    // ========================================================
+
+    function toggleTheme() {
+
+        document.body.classList.toggle(
+            "light"
+        );
+
+    }
+
+
+    // ========================================================
+    // INITIAL FOCUS
+    // ========================================================
+
+    messageInput.focus();
+
+</script>
+
+
+</body>
+</html>
