@@ -7,178 +7,341 @@
     <title>PyBot AI</title>
 
     <link rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}?v=2">
+          href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
 <div class="app">
 
-    <header class="header">
-        <div>
-            <h1>🤖 PyBot AI</h1>
-            <p>Your AI assistant for studying, coding and everyday questions.</p>
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-logo">🤖</div>
+
+            <div>
+                <div class="brand-name">PyBot</div>
+                <div class="brand-ai">AI ASSISTANT</div>
+            </div>
         </div>
 
-        <div class="status">
-            <span class="dot"></span>
-            Online
+        <div class="side-line"></div>
+
+        <div class="side-title">
+            AI MODES
         </div>
-    </header>
 
-    <section class="controls">
-
-        <label for="mode">Mode</label>
-
-        <select id="mode">
-            <option value="general">🌐 General</option>
-            <option value="study">📚 Study</option>
-            <option value="coding">💻 Coding</option>
-            <option value="creative">✨ Creative</option>
-        </select>
-
-        <label class="web-option">
-            <input type="checkbox" id="webSearch">
-            🌐 Web Search
-        </label>
-
-        <button id="clearBtn" type="button">
-            🗑️ Clear Chat
+        <button class="side-mode active" data-mode="General">
+            <span>◉</span>
+            General
         </button>
 
-    </section>
+        <button class="side-mode" data-mode="Study">
+            <span>◆</span>
+            Study
+        </button>
 
-    <main id="chat" class="chat">
+        <button class="side-mode" data-mode="Coding">
+            <span>⌘</span>
+            Coding
+        </button>
 
-        <div class="message bot">
-            <div class="avatar">🤖</div>
+        <button class="side-mode" data-mode="Creative">
+            <span>✦</span>
+            Creative
+        </button>
 
-            <div class="bubble">
-                <strong>PyBot AI</strong>
-                <p>
-                    Hello! 👋 I am PyBot AI.
-                    Ask me anything about studying, coding,
-                    creativity or general questions.
-                </p>
+        <div class="sidebar-bottom">
+
+            <div class="system-status">
+                <span class="status-dot"></span>
+                <div>
+                    <b>System Online</b>
+                    <small>PyBot AI Engine</small>
+                </div>
             </div>
+
+            <div class="version">
+                PYBOT AI • v1.0
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main">
+
+        <!-- HEADER -->
+
+        <header class="topbar">
+
+            <div class="mobile-brand">
+                <div class="brand-logo small">🤖</div>
+
+                <div>
+                    <div class="brand-name">PyBot AI</div>
+                    <div class="brand-ai">INTELLIGENT ASSISTANT</div>
+                </div>
+            </div>
+
+            <div class="header-right">
+
+                <div class="online">
+                    <span></span>
+                    ONLINE
+                </div>
+
+                <button id="clearBtn" class="clear-btn">
+                    🗑 Clear
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- CHAT -->
+
+        <section id="chat" class="chat">
+
+            <!-- WELCOME -->
+
+            <div id="welcome" class="welcome">
+
+                <div class="welcome-orb">
+                    🤖
+                </div>
+
+                <div class="welcome-title">
+                    Welcome to <span>PyBot AI</span>
+                </div>
+
+                <div class="welcome-text">
+                    Your intelligent assistant for
+                    <b>study, coding, creativity</b>
+                    and everyday questions.
+                </div>
+
+                <div class="quick-actions">
+
+                    <button data-prompt="What is Python?">
+                        <span>🐍</span>
+                        Learn Python
+                    </button>
+
+                    <button data-prompt="Explain photosynthesis simply">
+                        <span>📚</span>
+                        Study Help
+                    </button>
+
+                    <button data-prompt="Write a Python program">
+                        <span>💻</span>
+                        Write Code
+                    </button>
+
+                    <button data-prompt="Give me a creative project idea">
+                        <span>💡</span>
+                        Get Ideas
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- CONTROLS -->
+
+        <div class="controls">
+
+            <div class="control-left">
+
+                <div class="mode-label">
+                    MODE
+                </div>
+
+                <select id="modeSelect">
+
+                    <option value="General">
+                        General
+                    </option>
+
+                    <option value="Study">
+                        Study
+                    </option>
+
+                    <option value="Coding">
+                        Coding
+                    </option>
+
+                    <option value="Creative">
+                        Creative
+                    </option>
+
+                </select>
+
+
+                <label class="search-toggle">
+
+                    <input type="checkbox"
+                           id="webSearch">
+
+                    <span class="toggle"></span>
+
+                    <span class="search-text">
+                        🌐 Web Search
+                    </span>
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <!-- INPUT -->
+
+        <div class="input-area">
+
+            <div class="input-box">
+
+                <textarea
+                    id="messageInput"
+                    rows="1"
+                    maxlength="4000"
+                    placeholder="Ask PyBot anything..."
+                ></textarea>
+
+                <button id="sendBtn"
+                        class="send-btn">
+
+                    <span>➤</span>
+
+                </button>
+
+            </div>
+
+            <div class="input-hint">
+                Press <b>Enter</b> to send •
+                <b>Shift + Enter</b> for new line
+            </div>
+
         </div>
 
     </main>
 
-    <form id="chatForm" class="input-area">
-
-        <textarea
-            id="message"
-            placeholder="Type your message here..."
-            rows="1"
-            maxlength="6000"
-            required></textarea>
-
-        <button id="sendBtn" type="submit">
-            Send ➤
-        </button>
-
-    </form>
-
-    <div class="hint">
-        Press Enter to send • Shift + Enter for a new line
-    </div>
-
 </div>
+
 
 <script>
 
 const chat = document.getElementById("chat");
-const form = document.getElementById("chatForm");
-const messageInput = document.getElementById("message");
+const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
-const modeSelect = document.getElementById("mode");
+const modeSelect = document.getElementById("modeSelect");
 const webSearch = document.getElementById("webSearch");
 const clearBtn = document.getElementById("clearBtn");
+const welcome = document.getElementById("welcome");
 
 let history = [];
 
+
+// ================================================
+// ADD MESSAGE
+// ================================================
+
 function addMessage(text, type) {
 
-    const message = document.createElement("div");
-    message.className = "message " + type;
+    if (welcome) {
+        welcome.style.display = "none";
+    }
+
+    const row = document.createElement("div");
+    row.className = "message-row " + type;
 
     const avatar = document.createElement("div");
     avatar.className = "avatar";
-    avatar.textContent = type === "user" ? "👤" : "🤖";
+
+    avatar.textContent =
+        type === "user" ? "👤" : "🤖";
+
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
 
-    const content = document.createElement("div");
-    content.textContent = text;
+    bubble.textContent = text;
 
-    bubble.appendChild(content);
-    message.appendChild(avatar);
-    message.appendChild(bubble);
 
-    chat.appendChild(message);
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+
+    chat.appendChild(row);
+
     chat.scrollTop = chat.scrollHeight;
+
+    return bubble;
 }
 
-function addTyping() {
 
-    const message = document.createElement("div");
-    message.className = "message bot";
-    message.id = "typingMessage";
+// ================================================
+// TYPING
+// ================================================
+
+function showTyping() {
+
+    const row = document.createElement("div");
+
+    row.className = "message-row bot";
+    row.id = "typingRow";
 
     const avatar = document.createElement("div");
+
     avatar.className = "avatar";
     avatar.textContent = "🤖";
 
+
     const bubble = document.createElement("div");
+
     bubble.className = "bubble typing";
 
-    bubble.innerHTML = `
-        <span></span>
-        <span></span>
-        <span></span>
-    `;
+    bubble.innerHTML =
+        "<i></i><i></i><i></i>";
 
-    message.appendChild(avatar);
-    message.appendChild(bubble);
-    chat.appendChild(message);
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+
+    chat.appendChild(row);
 
     chat.scrollTop = chat.scrollHeight;
 }
 
-function removeTyping() {
 
-    const typing = document.getElementById("typingMessage");
+// ================================================
+// SEND
+// ================================================
 
-    if (typing) {
-        typing.remove();
-    }
-}
+async function sendMessage() {
 
-form.addEventListener("submit", async function(event) {
+    const text = input.value.trim();
 
-    event.preventDefault();
-
-    const text = messageInput.value.trim();
-
-    if (!text) {
-        return;
-    }
+    if (!text) return;
 
     addMessage(text, "user");
 
-    history.push({
-        role: "user",
-        content: text
-    });
-
-    messageInput.value = "";
+    input.value = "";
+    input.style.height = "auto";
 
     sendBtn.disabled = true;
-    sendBtn.textContent = "Thinking...";
 
-    addTyping();
+    showTyping();
+
 
     try {
 
@@ -191,17 +354,29 @@ form.addEventListener("submit", async function(event) {
             },
 
             body: JSON.stringify({
+
                 message: text,
+
                 mode: modeSelect.value,
+
                 web_search: webSearch.checked,
-                history: history.slice(-20)
+
+                history: history.slice(-6)
+
             })
 
         });
 
+
         const data = await response.json();
 
-        removeTyping();
+
+        const typing = document.getElementById("typingRow");
+
+        if (typing) {
+            typing.remove();
+        }
+
 
         if (!response.ok) {
 
@@ -210,8 +385,11 @@ form.addEventListener("submit", async function(event) {
                 "bot"
             );
 
+            sendBtn.disabled = false;
+
             return;
         }
+
 
         const reply =
             data.reply ||
@@ -219,70 +397,187 @@ form.addEventListener("submit", async function(event) {
             data.message ||
             "No response received.";
 
+
         addMessage(reply, "bot");
+
+
+        history.push({
+            role: "user",
+            content: text
+        });
+
 
         history.push({
             role: "assistant",
             content: reply
         });
 
+
     } catch (error) {
 
-        removeTyping();
+        const typing = document.getElementById("typingRow");
+
+        if (typing) {
+            typing.remove();
+        }
 
         addMessage(
-            "❌ Connection error. Please try again.",
+            "❌ PyBot could not connect to the AI service.",
             "bot"
         );
-
-        console.error(error);
-
-    } finally {
-
-        sendBtn.disabled = false;
-        sendBtn.textContent = "Send ➤";
-
-        messageInput.focus();
     }
 
-});
 
-messageInput.addEventListener("keydown", function(event) {
+    sendBtn.disabled = false;
 
-    if (event.key === "Enter" && !event.shiftKey) {
+    input.focus();
+}
 
-        event.preventDefault();
-        form.requestSubmit();
+
+// ================================================
+// SEND BUTTON
+// ================================================
+
+sendBtn.addEventListener(
+    "click",
+    sendMessage
+);
+
+
+// ================================================
+// ENTER
+// ================================================
+
+input.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+            sendMessage();
+        }
+
     }
+);
+
+
+// ================================================
+// AUTO TEXTAREA HEIGHT
+// ================================================
+
+input.addEventListener(
+    "input",
+    function() {
+
+        this.style.height = "auto";
+
+        this.style.height =
+            Math.min(this.scrollHeight, 150) + "px";
+
+    }
+);
+
+
+// ================================================
+// CLEAR CHAT
+// ================================================
+
+clearBtn.addEventListener(
+    "click",
+    function() {
+
+        history = [];
+
+        chat.innerHTML = "";
+
+        chat.appendChild(welcome);
+
+        welcome.style.display = "flex";
+
+    }
+);
+
+
+// ================================================
+// QUICK ACTIONS
+// ================================================
+
+document.querySelectorAll(
+    "[data-prompt]"
+).forEach(button => {
+
+    button.addEventListener(
+        "click",
+        function() {
+
+            input.value =
+                this.dataset.prompt;
+
+            input.focus();
+
+        }
+    );
 
 });
 
-clearBtn.addEventListener("click", function() {
 
-    history = [];
+// ================================================
+// SIDEBAR MODES
+// ================================================
 
-    chat.innerHTML = `
-        <div class="message bot">
+document.querySelectorAll(
+    ".side-mode"
+).forEach(button => {
 
-            <div class="avatar">🤖</div>
+    button.addEventListener(
+        "click",
+        function() {
 
-            <div class="bubble">
+            document.querySelectorAll(
+                ".side-mode"
+            ).forEach(btn => {
+                btn.classList.remove("active");
+            });
 
-                <strong>PyBot AI</strong>
 
-                <p>
-                    Chat cleared! 👋
-                    How can I help you?
-                </p>
+            this.classList.add("active");
 
-            </div>
 
-        </div>
-    `;
+            modeSelect.value =
+                this.dataset.mode;
 
-    messageInput.focus();
+        }
+    );
 
 });
+
+
+// ================================================
+// MODE SELECT SYNC
+// ================================================
+
+modeSelect.addEventListener(
+    "change",
+    function() {
+
+        document.querySelectorAll(
+            ".side-mode"
+        ).forEach(btn => {
+
+            btn.classList.toggle(
+                "active",
+                btn.dataset.mode === this.value
+            );
+
+        });
+
+    }
+);
 
 </script>
 
